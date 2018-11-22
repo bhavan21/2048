@@ -7,10 +7,11 @@ import numpy
 def defineModel():
 	model = Sequential()
 	model.add(Dense(100, input_dim=192, activation='relu'))
-	model.add(Dense(20, activation='relu'))
+	model.add(Dense(50, activation='relu'))
+	model.add(Dense(15, activation='relu'))
 	model.add(Dense(4, activation='linear'))
 	# Compile model
-	model.compile(loss='mean_squared_error', optimizer='sgd', metrics=['accuracy'])
+	model.compile(loss='mean_squared_error', optimizer='adam', metrics=['accuracy'])
 	return model
 
 
@@ -26,7 +27,7 @@ def loadModel():
 	model = model_from_json(model_json)
 	model.load_weights("model2.h5")
 
-	model.compile(loss='mean_squared_error', optimizer='sgd', metrics=['accuracy'])
+	model.compile(loss='mean_squared_error', optimizer='adam', metrics=['accuracy'])
 
 	return model
 
@@ -35,13 +36,13 @@ def saveModel(model):
 	with open("model2.json", "w") as json_file:
 	    json_file.write(model_json)
 	model.save_weights("model2.h5")
-	print("Saved model to disk")
+	# print("Saved model to disk")
 
 def getQ(model,X):
 	return model.predict(numpy.array([X]))[0]
 
 def train(model,X,Y):
-	model.fit(numpy.array(X), numpy.array(Y), epochs=5, batch_size=50,verbose=0)
+	model.fit(numpy.array(X), numpy.array(Y), epochs=5, batch_size=500,verbose=1)
 
 
 

@@ -19,7 +19,7 @@ def loadModel():
 		json_file = open('model2.json', 'r')
 	except:
 		print("Creating JSON file 2 and weights file")
-		return defineModel()
+		return defineModel()	
 
 	model_json = json_file.read()
 	json_file.close()

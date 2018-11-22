@@ -5,18 +5,21 @@ import copy
 # import nn
 import nn2
 import time
+from collections import deque
 
 # (0,0,0,0,...)
 
 terminalState = [0]*16
 indicesList = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
 actionList = [0,1,2,3]
+# episodeList = []
 
 epsilon = 0.1
 gamma = 1
+fourprob = 0.1
 
-replaymemory = []
-memSize = 50000
+replaymemory = deque()
+memSize = 5000
 batchSize = 1000
 
 trainingStarted = False
@@ -83,8 +86,11 @@ def getNextState(s,a):
 	if(len(empty_cell_list)==0): return nextState
 
 	p = random.uniform(0,1)
-	if p<0.1: nextState[random.choice(empty_cell_list)] = 2
-	else: nextState[random.choice(empty_cell_list)] = 1
+	if p<fourprob:
+		nextState[random.choice(empty_cell_list)] = 2
+
+	else: 
+		nextState[random.choice(empty_cell_list)] = 1
 
 
 	return nextState
@@ -130,8 +136,6 @@ def getRandomAction(s):
 
 def encodeInput(s):
 	result = [0]*192
-	# j = a*192
-	# 12 actions
 	for x in range(0,16):
 		result[12*x+s[x]] = 1 
 	return result
@@ -147,11 +151,55 @@ def addToReplayMemory(state,action,nextState,reward):
 	global trainingStarted
 
 	replaymemory.append([state,action,nextState,reward])
-	if len(replaymemory) == memSize+1:
+	if len(replaymemory) > memSize:
 		if not trainingStarted:
 			print("Training started")
 			trainingStarted = True
-		del replaymemory[0] 
+		replaymemory.popleft()
+
+def Zeroes(state):
+	temp = 0
+	for i in range(16):
+		if s[i] == 0:
+			temp+=1
+	return temp
+
+
+def getNextAllPossibleState(s,a):
+	if a==-1: return terminalState
+	nextState = [0]*16
+
+	if a==0:
+		for i in range(0,4):
+			nextState[i],nextState[i+4],nextState[i+8],nextState[i+12] = getNextPiece([s[i],s[i+4],s[i+8],s[i+12]])
+	elif a==1:
+		for i in range(0,4):
+			nextState[4*i+3],nextState[4*i+2],nextState[4*i+1],nextState[4*i] = getNextPiece([s[4*i+3],s[4*i+2],s[4*i+1],s[4*i]])
+	elif a==2:
+		for i in range(0,4):
+			nextState[i+12],nextState[i+8],nextState[i+4],nextState[i] = getNextPiece([s[i+12],s[i+8],s[i+4],s[i]])
+	elif a==3:
+		for i in range(0,4):
+			nextState[4*i],nextState[4*i+1],nextState[4*i+2],nextState[4*i+3] = getNextPiece([s[4*i],s[4*i+1],s[4*i+2],s[4*i+3]])
+
+	empty_cell_list = []
+	for i in range(0,16):
+		if(nextState[i]==0):
+			empty_cell_list.append(i)
+
+	temp = []
+	temp1 = []
+	if(len(empty_cell_list)==0): 
+		return [[nextState],[nextState]]
+	else:
+		for i in empty_cell_list:
+			tempstate = nextState
+			tempstate[i] = 2
+			temp.append(tempstate[:])
+			tempstate[i] = 4
+			temp1.append(tempstate[:])
+		return [temp,temp1]
+		
 	
 def updateQ():
 	global trainingStarted
@@ -163,8 +211,16 @@ def updateQ():
 		for i in range(0,len(newlist)):
 			state,action,nextState,reward = newlist[i]
 			y = getQ(state)
-			y[action] = reward + gamma * max(getQ(nextState))
+			twoStates,fourStates = getNextAllPossibleState(state,action)
+			s = 0.0
+			for i in twoStates:
+				s += (1-fourprob)*max(getQ(i)) * gamma
+			for i in fourStates:
+				s += fourprob * max(getQ(i)) * gamma
+			s = s/len(twoStates)
+			s += reward
 			X.append(encodeInput(state))
+			y[action] = s
 			Y.append(y)
 		nn2.train(model,X,Y)
 		
@@ -199,25 +255,27 @@ def printAction(a):
 def getReward(s,a):
 	totalReward = 0
 	temp= []
-	for i in range(0,4):
-		temp1 = getPieceReward([s[i],s[i+4],s[i+8],s[i+12]])
-		totalReward += temp1
-		temp.append(temp1)
-	for i in range(0,4):
-		temp1 = getPieceReward([s[4*i+3],s[4*i+2],s[4*i+1],s[4*i]])
-		totalReward += temp1
-		temp.append(temp1)
-	for i in range(0,4):
-		temp1 = getPieceReward([s[i+12],s[i+8],s[i+4],s[i]])
-		totalReward += temp1
-		temp.append(temp1)
-	for i in range(0,4):
-		temp1 = getPieceReward([s[4*i],s[4*i+1],s[4*i+2],s[4*i+3]])
-		totalReward += temp1
-		temp.append(temp1)
-	totalReward  = (4*temp[a]-totalReward)/5000
-	return totalReward
-
+	if a == 0:
+		for i in range(0,4):
+			temp1 = getPieceReward([s[i],s[i+4],s[i+8],s[i+12]])
+			totalReward += temp1
+		return totalReward/3000
+	elif a == 1:
+		for i in range(0,4):
+			temp1 = getPieceReward([s[4*i+3],s[4*i+2],s[4*i+1],s[4*i]])
+			totalReward += temp1
+		return totalReward/3000
+	elif a == 2:	
+		for i in range(0,4):
+			temp1 = getPieceReward([s[i+12],s[i+8],s[i+4],s[i]])
+			totalReward += temp1
+		return totalReward/3000
+	elif a == 3:
+		for i in range(0,4):
+			temp1 = getPieceReward([s[4*i],s[4*i+1],s[4*i+2],s[4*i+3]])
+			totalReward += temp1
+			temp.append(temp1)
+		return totalReward/3000
 
 
 def playGame():
@@ -239,13 +297,14 @@ def playGame():
 		previousState = currentstate
 		previousAction = action
 		currentstate = nextState
+		# if(currentstate == terminalState): addToReplayMemory(previousState,previousAction,currentstate,0)
 	# print("iters: "iters)
 
 
 if __name__ == "__main__":
 	global model
 	model = nn2.loadModel()
-	for i in range(0,1400):
+	for i in range(0,500):
 		start = time.time()
 		print(i+1)
 		sys.stdout.flush()
@@ -256,7 +315,6 @@ if __name__ == "__main__":
 		hours, rem = divmod(end-start, 3600)
 		minutes, seconds = divmod(rem, 60)
 		print("{:0>2}:{:0>2}:{:05.2f}".format(int(hours),int(minutes),seconds))
-# print(getNextPiece([1,0,0,1]))
 
 
 
