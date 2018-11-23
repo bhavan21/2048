@@ -11,8 +11,8 @@ Adam = optimizers.Adam(lr=0.005, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0
 def defineModel():
 	model = Sequential()
 	model.add(Dense(100, input_dim=192, activation='relu'))
-	# model.add(Dense(50, activation='relu'))
-	model.add(Dense(40, activation='relu'))
+	model.add(Dense(50, activation='relu'))
+	model.add(Dense(20, activation='relu'))
 	model.add(Dense(4, activation='linear'))
 	# Compile model
 	model.compile(loss='mean_squared_error', optimizer='adam', metrics=['accuracy'])

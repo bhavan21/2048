@@ -11,12 +11,12 @@ terminalState = [0]*16
 indicesList = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
 actionList = [0,1,2,3]
 
+totalEpisodes = 100
 
+#fourprob = 0.1
 
-totalEpisodes = 500
 epsilon = 0.9
 gamma = 1
-fourprob = 0.1
 
 replaymemory = deque()
 memSize = 5000
@@ -85,12 +85,7 @@ def getNextState(s,a):
 
 	if(len(empty_cell_list)==0): return nextState
 
-	p = random.uniform(0,1)
-	if p<fourprob:
-		nextState[random.choice(empty_cell_list)] = 2
-
-	else: 
-		nextState[random.choice(empty_cell_list)] = 1
+	nextState[random.choice(empty_cell_list)] = 1
 
 
 	return nextState
@@ -99,18 +94,11 @@ def getNextState(s,a):
 def initializeBoard():
 	s = [0]*16
 	TempindicesList = copy.copy(indicesList)
-
-	p = random.uniform(0,1)
 	firstindex = random.choice(TempindicesList)
-	if p<0.1: s[firstindex] = 2
-	else: s[firstindex] = 1
-
+	s[firstindex] = 1
 	del TempindicesList[firstindex]
-
-	p = random.uniform(0,1)
 	secondindex = random.choice(TempindicesList)
-	if p<0.1: s[secondindex] = 2
-	else: s[secondindex] = 1
+	s[secondindex] = 1
 
 	return s
 
@@ -188,23 +176,20 @@ def getNextAllPossibleState(s,a):
 			empty_cell_list.append(i)
 
 	temp = []
-	temp1 = []
+
 	if(len(empty_cell_list)==0): 
-		return [[nextState],[nextState]]
+		return [nextState]
 	else:
 		for i in empty_cell_list:
 			tempstate = nextState
 			tempstate[i] = 2
 			temp.append(tempstate[:])
-			tempstate[i] = 4
-			temp1.append(tempstate[:])
-		return [temp,temp1]
+		return temp
 		
 	
 def updateQ():
 	global trainingStarted
 	global epsilon
-	global totalEpisodes
 	if (trainingStarted):
 		X = []
 		Y = []
@@ -213,12 +198,10 @@ def updateQ():
 		for i in range(0,len(newlist)):
 			state,action,nextState,reward = newlist[i]
 			y = getQ(state)
-			twoStates,fourStates = getNextAllPossibleState(state,action)
+			twoStates = getNextAllPossibleState(state,action)
 			s = 0.0
-			for i in twoStates:
-				s += (1-fourprob)*max(getQ(i)) * gamma
-			for i in fourStates:
-				s += fourprob * max(getQ(i)) * gamma
+			for j in twoStates:
+				s += max(getQ(j)) * gamma
 			s = s/len(twoStates)
 			s += reward
 			X.append(encodeInput(state))
@@ -229,13 +212,18 @@ def updateQ():
 		if totalEpisodes != 1:
 			nn2.train(model,X,Y)
 		
+	# nn.train(model,x,y)
 
 def getAction(s):
+	global totalEpisodes
 	bestAction = -1
 	bestQ = float("-INF")
 	Qlist = getQ(s)
+	if totalEpisodes == 1:
+		print(Qlist)
 	for a in range(0,4):
 		currentQ = Qlist[a]
+		# print(currentQ)
 		if isValidMove(s,a) and currentQ>bestQ:
 			bestQ = currentQ
 			bestAction = a
@@ -260,53 +248,44 @@ def getReward(s,a,ns):
 		for i in range(0,4):
 			temp1 = getPieceReward([s[i],s[i+4],s[i+8],s[i+12]])
 			totalReward += temp1
-		return totalReward/5000 + float(max(ns))/64
+		return totalReward/5000 
 	elif a == 1:
 		for i in range(0,4):
 			temp1 = getPieceReward([s[4*i+3],s[4*i+2],s[4*i+1],s[4*i]])
 			totalReward += temp1
-		return totalReward/5000 + float(max(ns))/64
+		return totalReward/5000 
 	elif a == 2:	
 		for i in range(0,4):
 			temp1 = getPieceReward([s[i+12],s[i+8],s[i+4],s[i]])
 			totalReward += temp1
-		return totalReward/5000 + float(max(ns))/64
+		return totalReward/5000 
 	elif a == 3:
 		for i in range(0,4):
 			temp1 = getPieceReward([s[4*i],s[4*i+1],s[4*i+2],s[4*i+3]])
 			totalReward += temp1
 			temp.append(temp1)
-		return totalReward/5000 + float(max(ns))/64
+		return totalReward/5000
 
 
 def playGame():
-	global totalEpisodes
 	currentstate = initializeBoard()
 	previousState = -2
 	previousAction = -2
-	iters = 1
 	while(currentstate!=terminalState):
-		# if(iters==40):break
-		iters+=1
-		if (totalEpisodes == 1):
+		if totalEpisodes == 1:
 			printBoard(currentstate)
 		action = getAction(currentstate)
 		if previousAction != -2:
 			reward = getReward(previousState,previousAction,currentstate)
-			# print(reward)
-			# print(bestQ)
+
 			addToReplayMemory(previousState,previousAction,currentstate,reward)
 			updateQ()
-		if (totalEpisodes == 1):
+		if totalEpisodes == 1:
 			printAction(action)
 		nextState = getNextState(currentstate,action)
 		previousState = currentstate
 		previousAction = action
 		currentstate = nextState
-		# if(currentstate == terminalState): addToReplayMemory(previousState,previousAction,currentstate,0)
-	# print("iters: "iters)
-
-
 
 if __name__ == "__main__":
 	global model
@@ -316,7 +295,6 @@ if __name__ == "__main__":
 		epsilon = 0
 	model = nn2.loadModel()
 	Totalsteps = 0
-	Totalsteps2 = 0
 	for i in range(0,totalEpisodes):
 		start = time.time()
 		print(i+1)
@@ -332,7 +310,6 @@ if __name__ == "__main__":
 		hours, rem = divmod(end-start, 3600)
 		minutes, seconds = divmod(rem, 60)
 		print("{:0>2}:{:0>2}:{:05.2f}".format(int(hours),int(minutes),seconds))
-# print(getNextPiece([1,0,0,1]))
 
 
 
