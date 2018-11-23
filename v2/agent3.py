@@ -2,25 +2,25 @@ import sys
 import numpy
 import random
 import copy
-# import nn
 import nn2
 import time
 from collections import deque
 
-# (0,0,0,0,...)
 
 terminalState = [0]*16
 indicesList = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
 actionList = [0,1,2,3]
-# episodeList = []
 
-epsilon = 0.1
-gamma = 0.9
+
+
+totalEpisodes = 500
+epsilon = 0.9
+gamma = 1
 fourprob = 0.1
 
 replaymemory = deque()
 memSize = 5000
-batchSize = 500
+batchSize = 32
 
 trainingStarted = False
 
@@ -203,6 +203,8 @@ def getNextAllPossibleState(s,a):
 	
 def updateQ():
 	global trainingStarted
+	global epsilon
+	global totalEpisodes
 	if (trainingStarted):
 		X = []
 		Y = []
@@ -221,12 +223,12 @@ def updateQ():
 			s += reward
 			X.append(encodeInput(state))
 			y[action] = s
+			if s == float("INF") or s == float("-INF"):
+				print(s,state)
 			Y.append(y)
-		nn2.train(model,X,Y)
+		if totalEpisodes != 1:
+			nn2.train(model,X,Y)
 		
-
-
-	# nn.train(model,x,y)
 
 def getAction(s):
 	bestAction = -1
@@ -234,7 +236,6 @@ def getAction(s):
 	Qlist = getQ(s)
 	for a in range(0,4):
 		currentQ = Qlist[a]
-		# print(currentQ)
 		if isValidMove(s,a) and currentQ>bestQ:
 			bestQ = currentQ
 			bestAction = a
@@ -252,33 +253,34 @@ def printAction(a):
 	else: print(A[a])
 	print("")
 
-def getReward(s,a):
-	totalReward = 0
+def getReward(s,a,ns):
+	totalReward = 0.0
 	temp= []
 	if a == 0:
 		for i in range(0,4):
 			temp1 = getPieceReward([s[i],s[i+4],s[i+8],s[i+12]])
 			totalReward += temp1
-		return totalReward/3000
+		return totalReward/5000 + float(max(ns))/64
 	elif a == 1:
 		for i in range(0,4):
 			temp1 = getPieceReward([s[4*i+3],s[4*i+2],s[4*i+1],s[4*i]])
 			totalReward += temp1
-		return totalReward/3000
+		return totalReward/5000 + float(max(ns))/64
 	elif a == 2:	
 		for i in range(0,4):
 			temp1 = getPieceReward([s[i+12],s[i+8],s[i+4],s[i]])
 			totalReward += temp1
-		return totalReward/3000
+		return totalReward/5000 + float(max(ns))/64
 	elif a == 3:
 		for i in range(0,4):
 			temp1 = getPieceReward([s[4*i],s[4*i+1],s[4*i+2],s[4*i+3]])
 			totalReward += temp1
 			temp.append(temp1)
-		return totalReward/3000
+		return totalReward/5000 + float(max(ns))/64
 
 
 def playGame():
+	global totalEpisodes
 	currentstate = initializeBoard()
 	previousState = -2
 	previousAction = -2
@@ -286,13 +288,17 @@ def playGame():
 	while(currentstate!=terminalState):
 		# if(iters==40):break
 		iters+=1
-		# printBoard(currentstate)
+		if (totalEpisodes == 1):
+			printBoard(currentstate)
 		action = getAction(currentstate)
 		if previousAction != -2:
-			reward = getReward(previousState,previousAction)
+			reward = getReward(previousState,previousAction,currentstate)
+			# print(reward)
 			# print(bestQ)
 			addToReplayMemory(previousState,previousAction,currentstate,reward)
-		# printAction(action)
+			updateQ()
+		if (totalEpisodes == 1):
+			printAction(action)
 		nextState = getNextState(currentstate,action)
 		previousState = currentstate
 		previousAction = action
@@ -301,16 +307,27 @@ def playGame():
 	# print("iters: "iters)
 
 
+
 if __name__ == "__main__":
 	global model
+	istrain = int(sys.argv[1])
+	if istrain == 1:
+		totalEpisodes = 1
+		epsilon = 0
 	model = nn2.loadModel()
-	for i in range(0,500):
+	Totalsteps = 0
+	Totalsteps2 = 0
+	for i in range(0,totalEpisodes):
 		start = time.time()
 		print(i+1)
 		sys.stdout.flush()
 		playGame()
-		updateQ()
-		# nn2.saveModel(model)
+		if trainingStarted:
+			epsilon = epsilon/1.0025
+		if Totalsteps == 10:
+			nn2.saveModel(model)
+			Totalsteps = 0
+		Totalsteps+=1
 		end = time.time()
 		hours, rem = divmod(end-start, 3600)
 		minutes, seconds = divmod(rem, 60)
