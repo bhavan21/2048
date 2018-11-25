@@ -1,0 +1,1 @@
+This is another version of neural net which takes (s,a) as the input and gives Q(s,a) as input. This isn't our best model

@@ -1,0 +1,76 @@
+Team roll Numbers:
+
+150050060
+150050081
+150050091
+150050095
+
+Libraries needed to run:
+Python3
+Keras
+Numpy
+Tensorflow
+Matplotlib
+
+
+Policy Neural Net: (This is our best model)
+
+###################################################################################################
+To test the NN use command  : python3 agent.py "test"   > out
+To train the NN use command : python3 agent.py "train"  > out
+
+If test option is used in the file "out" the transistions of the game along with actions are 
+printed. States in form of 4x4 matrix where each element is log base2(actual element in matrix) 
+and action encoded as "U" for Upper "D" for Down "L" for left "R" for right.
+
+if train option is used the model trains for 750 episodes and weights get updated. 
+
+The neural network weights are Stored in model2.h5 and the nueralnetwork model is stored in 
+model2.json, To use the weights in any other environment or PC these two also must be copied.
+
+Global variables which can be tweaked like epsilon are mentioned at the start of agent.py.
+
+-----------------------------------------------------------------------------------------------------
+
+python3 gameplay.py > out : test the game for 1000 episodes
+python3 graph.py < out   : plots various graphs from the results of above 1000 episodes
+
+-----------------------------------------------------------------------------------------------------
+
+nn2.py contains neural network decleration, Saving model and Fitting model and Getting Output values.
+
+-----------------------------------------------------------------------------------------------------
+
+#######################################################################################################
+#######################################################################################################
+
+Q-Neural-Network:
+
+The folder Q-Neural-Network contains files related to Q-Neural-Network model.
+
+########################################################################################################
+
+To test the NN use command  : python3 agent.py "test"   > out
+To train the NN use command : python3 agent.py "train"  > out
+
+If test option is used in the file "out" the transistions of the game along with actions are 
+printed. States in form of 4x4 matrix where each element is log base2(actual element in matrix) 
+and action encoded as "U" for Upper "D" for Down "L" for left "R" for right.
+
+if train option is used the model trains for 750 episodes and weights get updated. 
+
+The neural network weights are Stored in model.h5 and the nueralnetwork model is stored in 
+model.json, To use the weights in any other environment or PC these two also must be copied.
+
+Global variables which can be tweaked like epsilon are mentioned at the start of agent.py
+
+-----------------------------------------------------------------------------------------------------
+
+nn.py contains neural network decleration, Saving model and Fitting model and Getting Output values.
+
+-----------------------------------------------------------------------------------------------------
+
+######################################################################################################
+
+
+

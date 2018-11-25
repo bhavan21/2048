@@ -7,20 +7,19 @@ import nn2
 import time
 from collections import deque
 
-# (0,0,0,0,...)
 
 terminalState = [0]*16
 indicesList = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
 actionList = [0,1,2,3]
-# episodeList = []
 
-epsilon = 0
+epsilon = 0.1
 gamma = 1
 fourprob = 0.1
 
 replaymemory = deque()
 memSize = 50000
 batchSize = 1000
+totalEpisodes = 750
 
 trainingStarted = False
 
@@ -91,8 +90,6 @@ def getNextState(s,a):
 
 	else: 
 		nextState[random.choice(empty_cell_list)] = 1
-
-
 	return nextState
 
 
@@ -203,6 +200,7 @@ def getNextAllPossibleState(s,a):
 	
 def updateQ():
 	global trainingStarted
+	global totalEpisodes
 	if (trainingStarted):
 		X = []
 		Y = []
@@ -222,11 +220,8 @@ def updateQ():
 			X.append(encodeInput(state))
 			y[action] = s
 			Y.append(y)
-		nn2.train(model,X,Y)
-		
-
-
-	# nn.train(model,x,y)
+		if totalEpisodes != 1:
+			nn2.train(model,X,Y)
 
 def getAction(s):
 	bestAction = -1
@@ -234,7 +229,6 @@ def getAction(s):
 	Qlist = getQ(s)
 	for a in range(0,4):
 		currentQ = Qlist[a]
-		# print(currentQ)
 		if isValidMove(s,a) and currentQ>bestQ:
 			bestQ = currentQ
 			bestAction = a
@@ -277,31 +271,33 @@ def getReward(s,a):
 
 
 def playGame():
+	global totalEpisodes
 	currentstate = initializeBoard()
 	previousState = -2
 	previousAction = -2
-	iters = 1
 	while(currentstate!=terminalState):
-		# if(iters==40):break
-		iters+=1
-		printBoard(currentstate)
+		if totalEpisodes == 1:
+			printBoard(currentstate)
 		action = getAction(currentstate)
 		if previousAction != -2:
 			reward = getReward(previousState,previousAction)
-			# print(bestQ)
 			addToReplayMemory(previousState,previousAction,currentstate,reward)
-		printAction(action)
+		if totalEpisodes == 1:
+			printAction(action)
 		nextState = getNextState(currentstate,action)
 		previousState = currentstate
 		previousAction = action
 		currentstate = nextState
-	# print("iters: "iters)
 
 
 if __name__ == "__main__":
 	global model
+	istrain = (sys.argv[1])
+	if istrain == "test":
+		totalEpisodes = 1
+		epsilon = 0
 	model = nn2.loadModel()
-	for i in range(0,1):
+	for i in range(0,totalEpisodes):
 		start = time.time()
 		print(i+1)
 		sys.stdout.flush()
@@ -312,7 +308,6 @@ if __name__ == "__main__":
 		hours, rem = divmod(end-start, 3600)
 		minutes, seconds = divmod(rem, 60)
 		print("{:0>2}:{:0>2}:{:05.2f}".format(int(hours),int(minutes),seconds))
-# print(getNextPiece([1,0,0,1]))
 
 
 

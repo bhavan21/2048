@@ -14,13 +14,13 @@ indicesList = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
 actionList = [0,1,2,3]
 # episodeList = []
 
-epsilon = 0.1
-gamma = 0.9
+epsilon = 0
+gamma = 1
 fourprob = 0.1
 
 replaymemory = deque()
-memSize = 5000
-batchSize = 500
+memSize = 50000
+batchSize = 1000
 
 trainingStarted = False
 
@@ -190,7 +190,7 @@ def getNextAllPossibleState(s,a):
 	temp = []
 	temp1 = []
 	if(len(empty_cell_list)==0): 
-		return [[nextState],[nextState]]
+		return [nextState],[nextState]
 	else:
 		for i in empty_cell_list:
 			tempstate = nextState
@@ -198,7 +198,7 @@ def getNextAllPossibleState(s,a):
 			temp.append(tempstate[:])
 			tempstate[i] = 4
 			temp1.append(tempstate[:])
-		return [temp,temp1]
+		return temp,temp1
 		
 	
 def updateQ():
@@ -255,66 +255,78 @@ def printAction(a):
 def getReward(s,a):
 	totalReward = 0
 	temp= []
-	if a == 0:
-		for i in range(0,4):
-			temp1 = getPieceReward([s[i],s[i+4],s[i+8],s[i+12]])
-			totalReward += temp1
-		return totalReward/3000
-	elif a == 1:
-		for i in range(0,4):
-			temp1 = getPieceReward([s[4*i+3],s[4*i+2],s[4*i+1],s[4*i]])
-			totalReward += temp1
-		return totalReward/3000
-	elif a == 2:	
-		for i in range(0,4):
-			temp1 = getPieceReward([s[i+12],s[i+8],s[i+4],s[i]])
-			totalReward += temp1
-		return totalReward/3000
-	elif a == 3:
-		for i in range(0,4):
-			temp1 = getPieceReward([s[4*i],s[4*i+1],s[4*i+2],s[4*i+3]])
-			totalReward += temp1
-			temp.append(temp1)
-		return totalReward/3000
+	for i in range(0,4):
+		temp1 = getPieceReward([s[i],s[i+4],s[i+8],s[i+12]])
+		totalReward += temp1
+		temp.append(temp1)
+	for i in range(0,4):
+		temp1 = getPieceReward([s[4*i+3],s[4*i+2],s[4*i+1],s[4*i]])
+		totalReward += temp1
+		temp.append(temp1)
+	for i in range(0,4):
+		temp1 = getPieceReward([s[i+12],s[i+8],s[i+4],s[i]])
+		totalReward += temp1
+		temp.append(temp1)
+	for i in range(0,4):
+		temp1 = getPieceReward([s[4*i],s[4*i+1],s[4*i+2],s[4*i+3]])
+		totalReward += temp1
+		temp.append(temp1)
+	totalReward  = (4*temp[a]-totalReward)/5000
+	return totalReward
+
 
 
 def playGame():
 	currentstate = initializeBoard()
 	previousState = -2
 	previousAction = -2
-	iters = 1
+	iters = 0
 	while(currentstate!=terminalState):
 		# if(iters==40):break
 		iters+=1
 		# printBoard(currentstate)
-		action = getAction(currentstate)
+		# action = getAction(currentstate)
+		action = getRandomAction(currentstate)
 		if previousAction != -2:
 			reward = getReward(previousState,previousAction)
 			# print(bestQ)
-			addToReplayMemory(previousState,previousAction,currentstate,reward)
+			# addToReplayMemory(previousState,previousAction,currentstate,reward)
 		# printAction(action)
 		nextState = getNextState(currentstate,action)
 		previousState = currentstate
 		previousAction = action
 		currentstate = nextState
-		# if(currentstate == terminalState): addToReplayMemory(previousState,previousAction,currentstate,0)
 	# print("iters: "iters)
+
+	# printBoard(previousState)
+	SCORE = 0
+	MAX = 0
+	for tile in previousState:
+		val = pow(2,tile)
+		MAX = max(MAX,val)
+		SCORE = SCORE+val
+	sys.stdout.write(""+str(MAX))
+	# sys.stdout.write("\t"+str(SCORE))
+	# sys.stdout.write("\t"+str(iters))
+	sys.stdout.write("\n")
 
 
 if __name__ == "__main__":
 	global model
 	model = nn2.loadModel()
-	for i in range(0,500):
+	print("episode\tmax tile\tscore\tsteps\n")
+	for i in range(0,1000):
 		start = time.time()
-		print(i+1)
+		# print(i+1)
 		sys.stdout.flush()
+		# sys.stdout.write(str(i+1))
 		playGame()
-		updateQ()
+		# updateQ()
 		# nn2.saveModel(model)
 		end = time.time()
 		hours, rem = divmod(end-start, 3600)
 		minutes, seconds = divmod(rem, 60)
-		print("{:0>2}:{:0>2}:{:05.2f}".format(int(hours),int(minutes),seconds))
+		# print("{:0>2}:{:0>2}:{:05.2f}".format(int(hours),int(minutes),seconds))
 # print(getNextPiece([1,0,0,1]))
 
 
